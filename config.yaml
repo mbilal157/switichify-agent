@@ -1,0 +1,30 @@
+agent:
+  backend_url: "https://telemetry.example/api/v1/telemetry"
+  backend_auth_token_env: "SWITCHIFY_BACKEND_TOKEN"
+  send_interval_seconds: 10
+  max_queue_size: 1000
+  timeout_seconds: 5
+
+primary_isp:
+  name: "primary"
+  interface: "eth0"
+  test_hosts:
+    - "1.1.1.1"
+    - "8.8.8.8"
+  icmp_threshold_ms: 120
+  packet_loss_threshold_pct: 10
+  fail_count: 3
+
+backup_isp:
+  name: "backup"
+  interface: "eth1"
+  test_hosts:
+    - "1.0.0.1"
+
+logging:
+  level: "info"
+  format: "json"
+
+isp:
+  primaryRouteCmd: "ip route replace default via 192.168.10.1"
+  backupRouteCmd: "ip route replace default via 192.168.20.1"
