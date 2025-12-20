@@ -8,7 +8,7 @@ import (
 	"github.com/bilal/switchify-agent/internal/config"
 	"github.com/bilal/switchify-agent/internal/decision"
 	"github.com/bilal/switchify-agent/internal/switcher"
-	import "github.com/bilal/switchify-agent/internal/communicator"
+	"github.com/bilal/switchify-agent/internal/communicator"
 
 )
 
@@ -22,14 +22,16 @@ type Monitor struct {
 
 func New(cfg *config.Config, comm *communicator.Communicator) *Monitor {
     engine := decision.NewEngine(decision.ThresholdConfig{
-        MaxLatencyMs:    cfg.Thresholds.MaxLatencyMs,
-        MaxPacketLoss:   cfg.Thresholds.MaxPacketLoss,
-        MaxJitterMs:     cfg.Thresholds.MaxJitterMs,
-        RecoveryLatency: cfg.Thresholds.RecoveryLatency,
-        RecoveryLoss:    cfg.Thresholds.RecoveryLoss,
-        RecoveryJitter:  cfg.Thresholds.RecoveryJitter,
-        Cooldown:        time.Duration(cfg.Thresholds.CooldownSeconds) * time.Second,
-    })
+	MaxLatencyMs:  float64(cfg.Primary.ICMPThresholdMs),
+	MaxPacketLoss: float64(cfg.Primary.PacketLossThresholdPct),
+	MaxJitterMs:   50, // safe fixed default for now
+
+	RecoveryLatency: float64(cfg.Primary.ICMPThresholdMs * 70 / 100),
+	RecoveryLoss:    float64(cfg.Primary.PacketLossThresholdPct * 70 / 100),
+	RecoveryJitter:  30,
+
+	Cooldown: 15 * time.Second,
+})
 
     sw, err := switcher.NewSwitcher(cfg.ISP.PrimaryGateway, cfg.ISP.BackupGateway)
     if err != nil {
@@ -73,8 +75,13 @@ tp := communicator.Telemetry{
 
 // non-blocking enqueue
 m.comm.Send(tp)
+snapshot := decision.HealthSnapshot{
+	AvgLatencyMs: metrics.AvgLatencyMs,
+	PacketLoss:   metrics.PacketLoss,
+	JitterMs:     metrics.JitterMs,
+}
 
-			state := m.engine.Evaluate(metrics)
+state := m.engine.Evaluate(snapshot)
 
 			log.Info().
 				Str("isp_state", string(state)).
