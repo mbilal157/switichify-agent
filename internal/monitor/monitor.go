@@ -33,6 +33,7 @@ func New(cfg *config.Config, comm *communicator.Communicator) *Monitor {
 	Cooldown: 15 * time.Second,
 })
 
+
     sw, err := switcher.NewSwitcher(cfg.ISP.PrimaryGateway, cfg.ISP.BackupGateway)
     if err != nil {
         panic("invalid gateway IPs in config: " + err.Error())
@@ -40,7 +41,7 @@ func New(cfg *config.Config, comm *communicator.Communicator) *Monitor {
 
     return &Monitor{
         cfg:      cfg,
-        pingMon:  NewPingMonitor(cfg.Agent.TargetHost, time.Duration(cfg.Agent.PingIntervalSeconds)*time.Second),
+        pingMon:  NewPingMonitor(cfg.Agent.TestHosts[0], time.Duration(cfg.Agent.IntervalSeconds)*time.Second),
         engine:   engine,
         switcher: sw,
 		comm:     comm,
@@ -50,7 +51,7 @@ func New(cfg *config.Config, comm *communicator.Communicator) *Monitor {
 func (m *Monitor) Run(ctx context.Context) {
 	log.Info().Msg("Monitor started")
 
-	ticker := time.NewTicker(time.Duration(m.cfg.Agent.PingIntervalSeconds) * time.Second)
+	ticker := time.NewTicker(time.Duration(m.cfg.Agent.IntervalSeconds) * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -64,14 +65,19 @@ func (m *Monitor) Run(ctx context.Context) {
 
 			metrics := m.pingMon.GetMetrics()
 			// create telemetry payload
-tp := communicator.Telemetry{
-    AgentName:  m.cfg.Agent.Name,
-    Timestamp:  time.Now(),
-    ISP:        "primary", // optionally detect which ISP you're testing
-    LatencyMs:  metrics.AvgLatencyMs,
-    PacketLoss: metrics.PacketLoss,
-    JitterMs:   metrics.JitterMs,
+mp := communicator.MetricsPayload{
+    Level:      "info",
+    IspState:   "PRIMARY_ACTIVE",
+    LatencyMs:  int(metrics.AvgLatencyMs),
+    PacketLoss: int(metrics.PacketLoss),
+    JitterMs:   int(metrics.JitterMs),
+    Time:       time.Now().UTC().Format(time.RFC3339),
+    Message:    "ping metrics collected",
 }
+SendMetrics(m MetricsPayload)
+SendLog(l LogPayload)
+m.comm.SendMetrics(mp)
+
 
 // non-blocking enqueue
 m.comm.Send(tp)

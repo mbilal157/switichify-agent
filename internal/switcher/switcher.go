@@ -1,10 +1,9 @@
-package router
+package switcher
 
 import (
 	"errors"
 	"fmt"
 	"net"
-
 	"github.com/rs/zerolog/log"
 	"github.com/vishvananda/netlink"
 )

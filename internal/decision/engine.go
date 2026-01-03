@@ -3,10 +3,11 @@ package decision
 import (
 	"sync"
 	"time"
-	"github.com/bilal/switchify-agent/internal/monitor"
 )
 
 type ISPState string
+
+
 
 const (
 	PrimaryActive   ISPState = "PRIMARY_ACTIVE"
@@ -56,7 +57,7 @@ type ThresholdConfig struct {
 	Cooldown        time.Duration
 }
 
-func (e *DecisionEngine) Evaluate(metrics monitor.PingMetrics) ISPState {
+func (e *DecisionEngine) Evaluate(metrics Heal) ISPState {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
